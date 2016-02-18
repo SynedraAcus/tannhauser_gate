@@ -31,8 +31,8 @@ class Poster():
         :return: boolean
         '''
         if self.scheduler.is_post_time():
-            print('{0} post time'.format(str(time.time())))
             post = self.scheduler.generate_post()
+            print('{0} posting {1}'.format(str(time.time(), post.title)))
             # try:
             self.post(post)
             return True
@@ -50,15 +50,16 @@ class Poster():
         '''
         assert type(post) is Post
         print (post.title)
-        #  Get the wall and remove old posts
+        #  Get the wall
         wall_posts = self.api.wall.get(owner_id='-{0}'.format(self.public_id),
                                      filter=all)
+        #  Remove old posts
         post_ids=[x['id'] for x in wall_posts[1:]] #  Skip the first element: it's post count
         for post_id in post_ids:
             self.api.wall.delete(owner_id='-{0}'.format(self.public_id),
                                  post_id=post_id)
         #  Add the photo to the group
-        #  This part is a messy collection of Stack Overflow quotes and blood magic
+        #  This part is a mess of Stack Overflow copypaste and blood magic
         #  Also the only piece of the script that uses requests directly. Perhaps switch to vk_requests
         #  or fork that project to add native support for image uploading?
         upload_server = self.api.photos.getWallUploadServer(group_id=self.public_id)
@@ -73,7 +74,6 @@ class Poster():
                                photo=post_result['photo'],
                                server=post_result['server'],
                                hash=post_result['hash'])
-        print(response)
         #  Add the post to the wall
         self.api.wall.post(owner_id='-{0}'.format(self.public_id),
                            from_group=1,
