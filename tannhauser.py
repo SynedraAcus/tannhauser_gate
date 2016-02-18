@@ -13,11 +13,14 @@ class Poster():
     The major class of app. Can post and give orders to other classes.
     """
 
-    def __init__(self, public_id=None, access_token=None, scheduler=None):
+    def __init__(self, public_id=None, app_id=None, scheduler=None, login=None, password=None):
         assert type(scheduler) is PostScheduler
         self.scheduler = scheduler
         self.public_id = public_id
-        self.access_token=access_token
+        self.app_id=app_id
+        self.session=vk.AuthSession(app_id=self.app_id, scope='groups',
+                                    user_login=login, user_password=password)
+        self.api = vk.API(self.session)
 
     def check(self):
         '''
@@ -28,11 +31,11 @@ class Poster():
         if self.scheduler.is_post_time():
             print('{0} post time'.format(str(time.time())))
             post = self.scheduler.generate_post()
-            try:
-                self.post(post)
-                return True
-            except:
-                sys.stderr.write('Posting at {0} unsuccessful'.format(time.asctime()))
+            # try:
+            self.post(post)
+            return True
+            # except:
+            #     sys.stderr.write('Posting at {0} unsuccessful'.format(time.asctime()))
         else:
             print(time.time())
             return False
@@ -44,8 +47,10 @@ class Poster():
         :return: nothing
         '''
         assert type(post) is Post
-        Image.open(post.image).show()
+        #Image.open(post.image).show()
         print (post.title)
+        #  Renaming
+        self.api.groups.edit(group_id=self.public_id, title=post.title)
 
 class Post():
     '''
@@ -59,7 +64,7 @@ class Post():
         assert type(image) is str
         assert type(title) is str
         self.image = image
-        self.title = title
+        self.title = str(title)
 
 class PostScheduler():
     '''
@@ -91,7 +96,7 @@ class PostScheduler():
         :return:
         '''
         #  Simply returns true if a minute elapsed since the object was created or post generated
-        return time.time()-5 >= self.last_post
+        return time.time()-60 >= self.last_post
 
     def generate_post(self):
         '''
@@ -106,7 +111,7 @@ class PostScheduler():
         #  Say we have produced the last frame and need to cycle back
         if self.current_pos+self.image_size > self.image.size[0]:
             self.current_pos = 0
-        post = Post(image='tmp.png', title='{0}'.format(int(time.time())))
+        post = Post(image='tmp.png', title='Shift_{0}'.format(self.current_pos-self.image_step))
         self.last_post = time.time()
         return post
 
@@ -114,11 +119,15 @@ class PostScheduler():
 if __name__ == '__main__':
     #  Init arguments parser
     args_parser = argparse.ArgumentParser(description='Autopost system for Tannhauser Gate project')
-    args_parser.add_argument('-p', type=str, help='Public ID (not a short string!')
-    args_parser.add_argument('-a', type=str, help='Access token')
+    args_parser.add_argument('-g', type=str, help='Group ID (number, not a string!')
+    args_parser.add_argument('-a', type=str, help='App ID')
+    args_parser.add_argument('-l', type=str, help='User login')
+    args_parser.add_argument('-p', type=str, help='User password')
     args = args_parser.parse_args()
-    poster = Poster(public_id=args.p,
-                    access_token=args.a,
+    poster = Poster(public_id=args.g,
+                    app_id=args.a,
+                    login=args.l,
+                    password=args.p,
                     scheduler=PostScheduler(image_source='prototype.png'))
     while 1>0:
         poster.check()
