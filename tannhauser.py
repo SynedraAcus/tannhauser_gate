@@ -4,16 +4,20 @@
 
 import time
 import sys
+import argparse
 from PIL import Image
+import vk
 
 class Poster():
     """
     The major class of app. Can post and give orders to other classes.
     """
 
-    def __init__(self, scheduler=None):
+    def __init__(self, public_id=None, access_token=None, scheduler=None):
         assert type(scheduler) is PostScheduler
         self.scheduler = scheduler
+        self.public_id = public_id
+        self.access_token=access_token
 
     def check(self):
         '''
@@ -106,8 +110,16 @@ class PostScheduler():
         self.last_post = time.time()
         return post
 
+
 if __name__ == '__main__':
-    poster = Poster(scheduler=PostScheduler(image_source='prototype.png'))
+    #  Init arguments parser
+    args_parser = argparse.ArgumentParser(description='Autopost system for Tannhauser Gate project')
+    args_parser.add_argument('-p', type=str, help='Public ID (not a short string!')
+    args_parser.add_argument('-a', type=str, help='Access token')
+    args = args_parser.parse_args()
+    poster = Poster(public_id=args.p,
+                    access_token=args.a,
+                    scheduler=PostScheduler(image_source='prototype.png'))
     while 1>0:
         poster.check()
         time.sleep(1)
