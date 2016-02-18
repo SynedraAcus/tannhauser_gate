@@ -4,6 +4,8 @@
 
 import time
 import sys
+import requests
+import json
 import argparse
 from PIL import Image
 import vk
@@ -48,20 +50,34 @@ class Poster():
         '''
         assert type(post) is Post
         print (post.title)
-        #  Get the wall and remove everything
+        #  Get the wall and remove old posts
         wall_posts = self.api.wall.get(owner_id='-{0}'.format(self.public_id),
                                      filter=all)
         post_ids=[x['id'] for x in wall_posts[1:]] #  Skip the first element: it's post count
         for post_id in post_ids:
             self.api.wall.delete(owner_id='-{0}'.format(self.public_id),
                                  post_id=post_id)
-        #  Add the photo to the album
-        # upload_server=self.api.photos.getWallUploadServer(group_id=self.public_id)
-        # print(upload_server)
+        #  Add the photo to the group
+        #  This part is a messy collection of Stack Overflow quotes and blood magic
+        #  Also the only piece of the script that uses requests directly. Perhaps switch to vk_requests
+        #  or fork that project to add native support for image uploading?
+        upload_server = self.api.photos.getWallUploadServer(group_id=self.public_id)
+        url = upload_server['upload_url']
+        response = requests.post(url,
+                                 # files={post.image: open(post.image, mode='rb')},
+                                 files={'photo': open(post.image, mode='rb')}
+                                 )
+        post_result = json.loads(response.text)
+        #  The photo was uploaded
+        response=self.api.photos.saveWallPhoto(group_id=self.public_id,
+                               photo=post_result['photo'],
+                               server=post_result['server'],
+                               hash=post_result['hash'])
+        print(response)
         #  Add the post to the wall
         self.api.wall.post(owner_id='-{0}'.format(self.public_id),
                            from_group=1,
-                           message=post.image)
+                           attachments=response[0]['id'])
         #  Renaming. Post title should include at least some non-numeric symbols
         self.api.groups.edit(group_id=self.public_id, title=post.title)
 
@@ -109,7 +125,7 @@ class PostScheduler():
         :return:
         '''
         #  Simply returns true if a minute elapsed since the object was created or post generated
-        return time.time()-10 >= self.last_post
+        return time.time()-60 >= self.last_post
 
     def generate_post(self):
         '''
