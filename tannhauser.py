@@ -18,7 +18,7 @@ class Poster():
         self.scheduler = scheduler
         self.public_id = public_id
         self.app_id=app_id
-        self.session=vk.AuthSession(app_id=self.app_id, scope='groups,wall',
+        self.session=vk.AuthSession(app_id=self.app_id, scope='groups,wall,photos',
                                     user_login=login, user_password=password)
         self.api = vk.API(self.session)
 
@@ -55,6 +55,13 @@ class Poster():
         for post_id in post_ids:
             self.api.wall.delete(owner_id='-{0}'.format(self.public_id),
                                  post_id=post_id)
+        #  Add the photo to the album
+        # upload_server=self.api.photos.getWallUploadServer(group_id=self.public_id)
+        # print(upload_server)
+        #  Add the post to the wall
+        self.api.wall.post(owner_id='-{0}'.format(self.public_id),
+                           from_group=1,
+                           message=post.image)
         #  Renaming. Post title should include at least some non-numeric symbols
         self.api.groups.edit(group_id=self.public_id, title=post.title)
 
@@ -102,7 +109,7 @@ class PostScheduler():
         :return:
         '''
         #  Simply returns true if a minute elapsed since the object was created or post generated
-        return time.time()-20 >= self.last_post
+        return time.time()-10 >= self.last_post
 
     def generate_post(self):
         '''
